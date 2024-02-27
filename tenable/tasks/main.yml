@@ -1,0 +1,74 @@
+- name: Include variables from nessus_vars.yml
+  include_vars:
+    file: vars/nessus_vars.yml
+
+- name: Check if OS is RHEL 7, RHEL 8, or RHEL 9
+  block:
+    - name: Set OS version fact
+      set_fact:
+        os_version: "{{ ansible_distribution_major_version | int }}"
+
+    - name: Fail if not RHEL 7, 8, or 9
+      fail:
+        msg: "This playbook only supports RHEL 7, RHEL 8, and RHEL 9"
+      when: ansible_distribution != 'RedHat' and os_version not in [7, 8, 9]
+
+- name: Create directories for nessus_agent
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - /apps/tools/nessus_agent
+    - /opt/nessus_agent
+
+- name: Add bind mount to /etc/fstab
+  lineinfile:
+    path: /etc/fstab
+    line: "/apps/tools/nessus_agent /opt/nessus_agent none defaults,bind 0 0"
+    state: present
+
+- name: Mount the bind mount
+  mount:
+    src: /apps/tools/nessus_agent
+    path: /opt/nessus_agent
+    fstype: none
+    opts: defaults,bind
+    state: mounted
+
+- name: Copy Nessus Agent RPM to /tmp with owner and group set to rothman
+  copy:
+    src: "files/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
+    dest: "/tmp/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
+    owner: rothman
+    group: rothman
+    mode: 0755
+    remote_sync: yes
+
+- name: Install Nessus Agent RPM from /tmp
+  yum:
+    name: "/tmp/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
+    state: latest
+
+- name: Execute nessuscli agent link command
+  command: >
+    /opt/nessus_agent/sbin/nessuscli agent link
+    --key "{{ agent_link_key }}"
+    --groups "{{ groups }}"
+    --proxy_host "{{ proxy_host }}"
+    --proxy_port "{{ proxy_port }}"
+    --host "{{ host }}"
+    --port "{{ port }}"
+
+- name: Start Nessus Agent service
+  service:
+    name: nessusagent
+    state: started
+
+- name: Check Nessus Agent status
+  shell: /opt/nessus_agent/sbin/nessuscli agent status
+  register: agent_status
+
+- name: Display Nessus Agent status
+  debug:
+    var: agent_status.stdout_lines
+

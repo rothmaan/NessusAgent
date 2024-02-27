@@ -1,0 +1,7 @@
+agent_link_key: "123344444"
+groups: "abc"
+proxy_host: "rhel-test"
+proxy_port: "123412341234123412341234123412341234123412341234"
+host: "sensor.cloud.tenable"
+port: "8080"
+nessus_rpm: "/Users/rothman/tenable/files/NessusAgent-10.5.1-el7.x86_64.rpm"
