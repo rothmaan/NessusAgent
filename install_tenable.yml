@@ -1,7 +1,7 @@
 # main.yaml
 
 - name: Execute Nessus Agent setup
-  hosts: rhel7
+  hosts: rhel
   become: yes
   ignore_errors: true
   roles:
