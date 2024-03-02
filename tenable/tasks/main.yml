@@ -50,6 +50,22 @@
     name: nessusagent
     state: started
 
+- name: Link Nessus Agent to manager
+  ansible.builtin.shell: >
+    /opt/nessus_agent/sbin/nessuscli agent link \
+    --key=YOUR_AGENT_KEY \
+    --groups=YOUR_GROUPS \
+    --proxy_host=YOUR_PROXY_HOST \
+    --proxy_port=YOUR_PROXY_PORT \
+    --host=MANAGER_HOST \
+    --port=MANAGER_PORT
+  register: link_result
+  ignore_errors: yes  # Ignore errors if the agent is already linked or if there are any issues
+
+- name: Debug link result
+  ansible.builtin.debug:
+    var: link_result
+
 - name: Check Nessus Agent status
   ansible.builtin.shell: /opt/nessus_agent/sbin/nessuscli agent status
   register: agent_status
