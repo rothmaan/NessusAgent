@@ -1,0 +1,7 @@
+---
+agent_link_key: "123344444"
+groups: "rhel,proxy,web01,web02,db01"
+proxy_host: "rhel-test"
+proxy_port: "123412341234123412341234123412341234123412341234"
+host: "sensor.cloud.tenable"
+port: "8080"
