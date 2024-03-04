@@ -1,3 +1,4 @@
+---
 - name: Check if OS is RHEL 7, RHEL 8, or RHEL 9
   block:
     - name: Set OS version fact
@@ -7,69 +8,34 @@
     - name: Fail if not RHEL 7, 8, or 9
       fail:
         msg: "This playbook only supports RHEL 7, RHEL 8, and RHEL 9"
-      when: ansible_distribution != 'RedHat' and os_version not in [7, 8, 9]
+      when: ansible_distribution != 'RedHat' or os_version not in [7, 8, 9]
 
-- name: Create directories for nessus agent
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-  loop:
-    - /apps/tools/nessus_agent
-    - /opt/nessus_agent
+- name: Check if Nessus Agent is installed
+  shell: rpm -q NessusAgent
+  register: nessus_installed
+  ignore_errors: yes
 
-- name: Add bind mount to /etc/fstab
-  ansible.builtin.lineinfile:
-    path: /etc/fstab
-    line: "/apps/tools/nessus_agent /opt/nessus_agent none defaults,bind 0 0"
-    state: present
+- name: Display message if Nessus Agent is already installed
+  debug:
+    msg: "Nessus Agent is already installed on {{ inventory_hostname }}"
+  when: nessus_installed.rc == 0
 
-- name: Mount the bind mount
-  ansible.builtin.mount:
-    src: /apps/tools/nessus_agent
-    path: /opt/nessus_agent
-    fstype: none
-    opts: defaults,bind
-    state: mounted
+- block:
+    - name: Copy Nessus Agent RPM to /tmp
+      copy:
+        src: "files/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
+        dest: "/tmp/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
+        mode: '0755'
 
-- name: Copy Nessus Agent RPM to /tmp/tenable with owner and group set to rothman
-  ansible.builtin.copy:
-    src: "tenable/files/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
-    dest: "/tmp/tenable/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
-    owner: rothman
-    group: rothman
-    mode: '0755'
+    - name: Install Nessus Agent RPM
+      yum:
+        name: "/tmp/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
+        state: present
 
-- name: Install Nessus Agent RPM from /tmp
-  ansible.builtin.yum:
-    name: "/tmp/tenable/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
-    state: present
+    - name: Remove Nessus Agent RPM from /tmp after installation
+      file:
+        path: "/tmp/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
+        state: absent
 
-- name: Start Nessus Agent service
-  ansible.builtin.service:
-    name: nessusagent
-    state: started
-
-- name: Link Nessus Agent to manager
-  ansible.builtin.shell: >
-    /opt/nessus_agent/sbin/nessuscli agent link \
-    --key=YOUR_AGENT_KEY \
-    --groups=YOUR_GROUPS \
-    --proxy_host=YOUR_PROXY_HOST \
-    --proxy_port=YOUR_PROXY_PORT \
-    --host=MANAGER_HOST \
-    --port=MANAGER_PORT
-  register: link_result
-  ignore_errors: yes  # Ignore errors if the agent is already linked or if there are any issues
-
-- name: Debug link result
-  ansible.builtin.debug:
-    var: link_result
-
-- name: Check Nessus Agent status
-  ansible.builtin.shell: /opt/nessus_agent/sbin/nessuscli agent status
-  register: agent_status
-
-- name: Display Nessus Agent status
-  ansible.builtin.debug:
-    var: agent_status.stdout_lines
+  when: nessus_installed.rc != 0
 
