@@ -31,18 +31,17 @@
     opts: defaults,bind
     state: mounted
 
-- name: Copy Nessus Agent RPM to /tmp with owner and group set to rothman
+- name: Copy Nessus Agent RPM to /tmp/tenable with owner and group set to rothman
   ansible.builtin.copy:
     src: "tenable/files/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
-    dest: "/tmp/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
+    dest: "/tmp/tenable/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
     owner: rothman
     group: rothman
     mode: '0755'
-    backup: no
 
 - name: Install Nessus Agent RPM from /tmp
   ansible.builtin.yum:
-    name: "/tmp/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
+    name: "/tmp/tenable/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
     state: present
 
 - name: Start Nessus Agent service
