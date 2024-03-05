@@ -21,7 +21,7 @@
   when: nessus_installed.rc == 0
 
 - block:
-    - name: Copy Nessus Agent RPM to /tmp
+    - name: Copy Nessus Agent RPM to /tmp/tenable
       copy:
         src: "files/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
         dest: "/tmp/NessusAgent-10.5.1-el{{ os_version }}.x86_64.rpm"
@@ -38,4 +38,10 @@
         state: absent
 
   when: nessus_installed.rc != 0
+
+- name: Start and enable Nessus Agent service
+  systemd:
+    name: nessusagent
+    enabled: yes
+    state: started
 
